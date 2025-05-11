@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 # 1) تحميل متغيرات البيئة
 load_dotenv()
 client = groq.Client(api_key=os.getenv("GROQ_API_KEY"))
+USER_ICON_PATH = "assets/user_icon.png"
+ASSISTANT_ICON_PATH = "assets/assistant_icon.png"
 
 # 2) إعداد الصفحة
 st.set_page_config(
@@ -14,6 +16,44 @@ st.set_page_config(
     layout="wide"
 )
 st.title("🩺 أخصائي العلاج الطبيعي الذكي بالعربي")
+
+# ─── inject CSS to right-align user bubbles ─────────────────────
+st.markdown(
+    """
+    <style>
+      /* 1) Make the outer user‐message container flex and right-aligned */
+      div[data-testid="stChatMessageRole_user"] {
+        display: flex !important;
+        flex-direction: row-reverse !important;
+        justify-content: flex-end !important;
+        padding-right: 1rem !important;
+      }
+
+      /* 2) Ensure the text bubble comes first, then the avatar */
+      div[data-testid="stChatMessageRole_user"] > div:first-child {
+        order: 1 !important;
+      }
+      div[data-testid="stChatMessageRole_user"] img {
+        order: 2 !important;
+        margin-left: 0.5rem !important;
+      }
+
+      /* 3) Right-align the markdown text inside the bubble */
+      div[data-testid="stChatMessageRole_user"] .stMarkdown {
+        text-align: right !important;
+      }
+
+      /* 4) Optionally cap bubble width */
+      div[data-testid="stChatMessageRole_user"] .stMarkdown > div {
+        max-width: 60% !important;
+      }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+
 
 # 3) شريط جانبي: تخصيص مدرب العلاج الطبيعي
 st.sidebar.title("تخصيص مدرب العلاج الطبيعي")
@@ -85,7 +125,8 @@ else:
 # 5) عرض المحادثات السابقة
 for msg in st.session_state.messages:
     if msg["role"] != "system":
-        with st.chat_message(msg["role"]):
+        avatar = USER_ICON_PATH if msg["role"] == "user" else ASSISTANT_ICON_PATH
+        with st.chat_message(msg["role"],avatar=avatar):
             st.markdown(msg["content"])
 
 # 6) إدخال المستخدم واستدعاء الـ API
@@ -94,10 +135,10 @@ if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
 
     # Display user message
-    with st.chat_message("user"):
+    with st.chat_message("user",avatar=USER_ICON_PATH):
         st.markdown(user_input)
     
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant",avatar=ASSISTANT_ICON_PATH):
         placeholder = st.empty()
         try:
             resp = client.chat.completions.create(
@@ -108,22 +149,6 @@ if user_input:
             )
             reply = resp.choices[0].message.content
             placeholder.markdown(reply)
-            
-            # token counts
-            prompt_toks     = resp.usage.prompt_tokens
-            completion_toks = resp.usage.completion_tokens
-            completion_time      = resp.usage.completion_time
-            total_toks      = resp.usage.total_tokens
-            
-            # display or log
-            st.sidebar.markdown(
-                f"**Tokens used**  \n"
-                f"- Prompt: {prompt_toks}  \n"
-                f"- Completion Tokens: {completion_toks}  \n"
-                f"- Completion Time: {completion_time}  \n"
-                f"- **Total**: {total_toks}"
-            )
-
             st.session_state.messages.append({"role": "assistant", "content": reply})
         except Exception as e:
             placeholder.error(f"خطأ في الـ API: {e}")
