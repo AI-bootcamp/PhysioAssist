@@ -92,6 +92,11 @@ for msg in st.session_state.messages:
 user_input = st.chat_input("اسأل عن تمرينك أو حالتك العلاجية…")
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
+
+    # Display user message
+    with st.chat_message("user"):
+        st.markdown(user_input)
+    
     with st.chat_message("assistant"):
         placeholder = st.empty()
         try:
@@ -103,6 +108,22 @@ if user_input:
             )
             reply = resp.choices[0].message.content
             placeholder.markdown(reply)
+            
+            # token counts
+            prompt_toks     = resp.usage.prompt_tokens
+            completion_toks = resp.usage.completion_tokens
+            completion_time      = resp.usage.completion_time
+            total_toks      = resp.usage.total_tokens
+            
+            # display or log
+            st.sidebar.markdown(
+                f"**Tokens used**  \n"
+                f"- Prompt: {prompt_toks}  \n"
+                f"- Completion Tokens: {completion_toks}  \n"
+                f"- Completion Time: {completion_time}  \n"
+                f"- **Total**: {total_toks}"
+            )
+
             st.session_state.messages.append({"role": "assistant", "content": reply})
         except Exception as e:
             placeholder.error(f"خطأ في الـ API: {e}")
