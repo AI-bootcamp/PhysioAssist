@@ -22,45 +22,62 @@ st.title("🩺 أخصائي العلاج الطبيعي الذكي بالعرب�
 st.markdown(
     """
     <style>
-      /* Container to wrap each message */
-      .msg {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 0.75rem;
-        clear: both;
-      }
-      /* Assistant messages float left */
-      .msg.assistant {
-        justify-content: flex-start;
-      }
-      /* User messages float right */
-      .msg.user {
-        justify-content: flex-end;
-      }
-      /* The bubble itself */
+      /* chat bubbles */
+      .msg { display: flex; align-items: flex-start; margin-bottom: 0.75rem; clear: both; }
+      .assistant { justify-content: flex-start; }
+      .user      { justify-content: flex-end; }
+
       .bubble {
         max-width: 60%;
         padding: 0.75rem 1rem;
         border-radius: 1rem;
-        word-wrap: break-word;
         line-height: 1.4;
+        word-wrap: break-word;
       }
-      /* Bubble colors */
+
+      /* Assistant bubble */
       .assistant .bubble {
-        background-color: #E5E5EA;
-        color: #000;
+        background: #E5E5EA !important;
+        color: #000 !important;
       }
+
+      /* <-- Updated User bubble color here --> */
       .user .bubble {
-        background-color: #DCF8C6;
-        color: #000;
+        background: #BBD6EB !important;
+        color: #000 !important;
       }
-      /* Avatars */
+
       .avatar {
         width: 32px;
         height: 32px;
         border-radius: 50%;
         margin: 0 0.5rem;
       }
+
+      /* input bar styling (unchanged) */
+      div[data-testid="stChatInput"] { margin-top: 1rem !important; }
+      textarea[role="textbox"] {
+        width: 100% !important;
+        padding: 12px !important;
+        border: none !important;
+        border-radius: 18px !important;
+        background: #262626 !important;
+        color: #fff !important;
+        font-size: 16px !important;
+        outline: none !important;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.2) !important;
+      }
+      textarea[role="textbox"]::placeholder { color: #999 !important; }
+      button[kind="primary"] {
+        padding: 10px 20px !important;
+        margin-left: 0.5rem !important;
+        background: #4CAF50 !important;
+        color: #fff !important;
+        border: none !important;
+        border-radius: 18px !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
+      }
+      button[kind="primary"]:hover { background: #45a049 !important; }
     </style>
     """,
     unsafe_allow_html=True,
