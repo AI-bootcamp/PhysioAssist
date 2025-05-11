@@ -2,12 +2,13 @@ import os
 import streamlit as st
 import groq
 from dotenv import load_dotenv
+import base64
+
+
 
 # 1) تحميل متغيرات البيئة
 load_dotenv()
 client = groq.Client(api_key=os.getenv("GROQ_API_KEY"))
-USER_ICON_PATH = "assets/user_icon.png"
-ASSISTANT_ICON_PATH = "assets/assistant_icon.png"
 
 # 2) إعداد الصفحة
 st.set_page_config(
@@ -21,37 +22,80 @@ st.title("🩺 أخصائي العلاج الطبيعي الذكي بالعرب�
 st.markdown(
     """
     <style>
-      /* 1) Make the outer user‐message container flex and right-aligned */
-      div[data-testid="stChatMessageRole_user"] {
-        display: flex !important;
-        flex-direction: row-reverse !important;
-        justify-content: flex-end !important;
-        padding-right: 1rem !important;
+      /* Container to wrap each message */
+      .msg {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+        clear: both;
       }
-
-      /* 2) Ensure the text bubble comes first, then the avatar */
-      div[data-testid="stChatMessageRole_user"] > div:first-child {
-        order: 1 !important;
+      /* Assistant messages float left */
+      .msg.assistant {
+        justify-content: flex-start;
       }
-      div[data-testid="stChatMessageRole_user"] img {
-        order: 2 !important;
-        margin-left: 0.5rem !important;
+      /* User messages float right */
+      .msg.user {
+        justify-content: flex-end;
       }
-
-      /* 3) Right-align the markdown text inside the bubble */
-      div[data-testid="stChatMessageRole_user"] .stMarkdown {
-        text-align: right !important;
+      /* The bubble itself */
+      .bubble {
+        max-width: 60%;
+        padding: 0.75rem 1rem;
+        border-radius: 1rem;
+        word-wrap: break-word;
+        line-height: 1.4;
       }
-
-      /* 4) Optionally cap bubble width */
-      div[data-testid="stChatMessageRole_user"] .stMarkdown > div {
-        max-width: 60% !important;
+      /* Bubble colors */
+      .assistant .bubble {
+        background-color: #E5E5EA;
+        color: #000;
+      }
+      .user .bubble {
+        background-color: #DCF8C6;
+        color: #000;
+      }
+      /* Avatars */
+      .avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        margin: 0 0.5rem;
       }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
+
+# ─── Helper to force left/right layout ─────────────────────────
+def render_message(role, text, avatar_uri):
+    """
+    role 'assistant' → left, role 'user' → right
+    """
+    if role == "assistant":
+        html = f'''
+          <div class="msg assistant">
+            <img src="{avatar_uri}" class="avatar"/>
+            <div class="bubble">{text}</div>
+          </div>'''
+    else:
+        html = f'''
+          <div class="msg user">
+            <div class="bubble">{text}</div>
+            <img src="{avatar_uri}" class="avatar"/>
+          </div>'''
+    st.markdown(html, unsafe_allow_html=True)
+
+
+
+def img_to_datauri(path: str) -> str:
+    with open(path, "rb") as f:
+        data = f.read()
+    b64 = base64.b64encode(data).decode()
+    return f"data:image/png;base64,{b64}"
+
+USER_ICON_URI      = img_to_datauri("assets/user_icon.png")
+ASSISTANT_ICON_URI = img_to_datauri("assets/assistant_icon.png")
 
 
 
@@ -124,34 +168,53 @@ else:
 
 # 5) عرض المحادثات السابقة
 for msg in st.session_state.messages:
-    if msg["role"] != "system":
-        avatar = USER_ICON_PATH if msg["role"] == "user" else ASSISTANT_ICON_PATH
-        with st.chat_message(msg["role"],avatar=avatar):
-            st.markdown(msg["content"])
+    if msg["role"] == "system":
+        continue
+
+    # pick the right data‐URI
+    uri = USER_ICON_URI if msg["role"] == "user" else ASSISTANT_ICON_URI
+
+    if msg["role"] == "assistant":
+        html = f'''
+          <div class="msg assistant">
+            <img src="{uri}" class="avatar"/>
+            <div class="bubble">{msg["content"]}</div>
+          </div>
+        '''
+    else:
+        html = f'''
+          <div class="msg user">
+            <div class="bubble">{msg["content"]}</div>
+            <img src="{uri}" class="avatar"/>
+          </div>
+        '''
+
+    st.markdown(html, unsafe_allow_html=True)
+
 
 # 6) إدخال المستخدم واستدعاء الـ API
 user_input = st.chat_input("اسأل عن تمرينك أو حالتك العلاجية…")
 if user_input:
+    # record user
     st.session_state.messages.append({"role": "user", "content": user_input})
+    # render user
+    render_message("user", user_input, USER_ICON_URI)
 
-    # Display user message
-    with st.chat_message("user",avatar=USER_ICON_PATH):
-        st.markdown(user_input)
-    
-    with st.chat_message("assistant",avatar=ASSISTANT_ICON_PATH):
-        placeholder = st.empty()
-        try:
-            resp = client.chat.completions.create(
-                messages=st.session_state.messages,
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-            reply = resp.choices[0].message.content
-            placeholder.markdown(reply)
-            st.session_state.messages.append({"role": "assistant", "content": reply})
-        except Exception as e:
-            placeholder.error(f"خطأ في الـ API: {e}")
+    # call API
+    try:
+        resp = client.chat.completions.create(
+            messages=st.session_state.messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        reply = resp.choices[0].message.content
+    except Exception as e:
+        reply = f"خطأ في الـ API: {e}"
+
+    # record + render assistant
+    st.session_state.messages.append({"role": "assistant", "content": reply})
+    render_message("assistant", reply, ASSISTANT_ICON_URI)
 
 # 7) زر إعادة الضبط
 if st.sidebar.button("إعادة ضبط"):
