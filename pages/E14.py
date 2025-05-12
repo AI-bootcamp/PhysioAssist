@@ -4,9 +4,10 @@ import mediapipe as mp
 import math
 from PIL import Image
 import time
+import base64
 
 def main():
-    st.title("🖐️ Thumb-to-Finger Touch")
+    st.markdown("<h1 style='color: black;'>🖐 Thumb-to-Finger Touch</h1>", unsafe_allow_html=True)
 
     # Return to home
     if st.button("🔙 Return to Home"):
@@ -15,6 +16,29 @@ def main():
             st.session_state.cap.release()
             del st.session_state.cap
         st.stop()
+
+    # CSS لتعديل اللون وتوسيط الفيديو
+    st.markdown("""
+       <style>
+       body {
+           color: black !important;
+       }
+       .stAlert {
+           color: black !important;
+       }
+       video {
+           max-width: 400px;
+           height: auto;
+           display: block;
+           margin: 0 auto;
+       }
+       </style>
+     """, unsafe_allow_html=True)
+
+    # عرض فيديو توضيحي للتمرين
+    video_file = open("videos\ThumbOppsition.mp4", "rb")
+    video_bytes = video_file.read()
+    st.video(video_bytes)
 
     # Initialize MediaPipe
     mp_hands = mp.solutions.hands
@@ -26,7 +50,6 @@ def main():
     current_finger = 0
     score = 0
 
-    # Webcam (persistent across reruns)
     if "cap" not in st.session_state:
         st.session_state.cap = cv2.VideoCapture(0)
 
@@ -41,7 +64,7 @@ def main():
 
     run_time = 60
     start_time = time.time()
-
+   
     while time.time() - start_time < run_time:
         ret, image = cap.read()
         if not ret:
@@ -59,7 +82,6 @@ def main():
                 thumb_tip = (lm[4].x * w, lm[4].y * h)
                 target_tip = (lm[finger_ids[current_finger]].x * w, lm[finger_ids[current_finger]].y * h)
 
-                # Draw points (no filters, natural view)
                 cv2.circle(image, (int(thumb_tip[0]), int(thumb_tip[1])), 12, (255, 255, 0), -1)
                 cv2.putText(image, "Thumb", (int(thumb_tip[0]), int(thumb_tip[1]) - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
@@ -74,9 +96,17 @@ def main():
                         current_finger = (current_finger + 1) % 4
                         prev_touch_time = time.time()
 
-        instruction_display.info(f"🟢 Touch your **{finger_names[current_finger]}** finger with your thumb.")
-        score_display.metric("Score", score)
-        frame_slot.image(image, channels="BGR")
+        instruction_display.markdown(f"<p style='color: black;'>🟢 Touch your <strong>{finger_names[current_finger]}</strong> finger with your thumb.</p>", unsafe_allow_html=True)
+        score_display.markdown(f"<h4 style='color: black;'>Score: {score}</h4>", unsafe_allow_html=True)
+
+        # توسيط الكاميرا
+        _, buffer = cv2.imencode('.jpg', image)
+        img_b64 = base64.b64encode(buffer).decode()
+        frame_slot.markdown(f"""
+            <div style='display: flex; justify-content: center;'>
+                <img src="data:image/jpeg;base64,{img_b64}" style="max-width: 100%; height: auto; border-radius: 10px;" />
+            </div>
+        """, unsafe_allow_html=True)
 
     cap.release()
     del st.session_state.cap
