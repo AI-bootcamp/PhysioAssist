@@ -276,7 +276,7 @@ if st.session_state.page == "team":#============================================
         {
             "name": "Abdulaziz Alkharjy",
             "linkedin": "https://www.linkedin.com/in/abdulaziz--saad?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
-            "bio": "We developed an intelligent system where a camera serves as a virtual assistant for physical therapy. It uses MediaPipe for tracking and analyzing joint angles to monitor the user's movements, ensuring correct execution of exercises, and I worked on developing a customized AI chat feature."
+            "bio": "We developed an intelligent system where a camera serves as a virtual assistant for physical therapy. It uses MediaPipe for tracking and analyzing joint angles to monitor the user's movements, ensuring correct execution of exercises, and I worked on developing a customized AI chat feature, and contributed to the computer vision backend."
         }
 
         
