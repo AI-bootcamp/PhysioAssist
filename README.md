@@ -27,5 +27,5 @@ GROQ_API_KEY=your_groq_api_key_here
    ```
 2. Run the app
 ```bash
-streamlit run app.py
+streamlit run Home.py
 ```
