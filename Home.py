@@ -806,9 +806,9 @@ exercises = [
     {"title": "Pose Tracker", "image": "./images/Shoulder Abduction.jpeg", "module": "pose_tracker"},
     {"title": "Neck Tilt", "image": "./images/Neck Tilt_white.jpg", "module": "pose_tracker"}, 
     {"title": "Knee Extension", "image": "./images/Knee Extension.png", "module": "pose_tracker"},
-    {"title": "shoulder_abdc_connection", "image": "./images/Knee Extension.png", "module": "shoulder_abdc_connection"},
-    {"title": "right_abduction_streamlit.py", "image": "./images/Knee Extension.png", "module": "right_abduction_streamlit"},
-    {"title": "left_abduction_streamlit.py", "image": "./images/Knee Extension.png", "module": "left_abduction_streamlit"},
+    # {"title": "shoulder_abdc_connection", "image": "./images/tobedone.jpg", "module": "shoulder_abdc_connection"},
+    {"title": "Right Abduction", "image": "./images/tobedone.jpg", "module": "right_abduction_streamlit"},
+    {"title": "Left Abduction", "image": "./images/tobedone.jpg", "module": "left_abduction_streamlit"},
 ]
 
 st.markdown('<div style="color: #334EAC; font-size: 1.1rem; font-family: Poppins, sans-serif; margin-bottom: 1.5rem;">Let\'s work through today\'s therapy session and take one step closer to your recovery:</div>', unsafe_allow_html=True)
