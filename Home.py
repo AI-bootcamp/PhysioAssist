@@ -4,6 +4,7 @@ import importlib
 import base64
 from dotenv import load_dotenv
 import groq
+import re
 
 # --- Paths ---
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -602,91 +603,98 @@ elif st.session_state.page == "chat":
 
     # ─── instead of st.sidebar.title, in code defaults ──────────────────
     # Sidebar UI gone; we hard-code our defaults here:
+    
+    # ─── 1) DEFAULTS (no sidebar) ─────────────────────────────────────────
     DEFAULT_MODEL_KEY      = "ALLAM-2-7b"
     DEFAULT_TEMPERATURE    = 0.7
-    DEFAULT_MAX_TOKENS     = 1024
-    DEFAULT_CHARACTER_KEY  = "أخصائي علاج طبيعي - إرشادات عامة"
-    DEFAULT_MOOD_KEY       = "محايد"   # choices: "محايد", "مشجّع", "صبور"
-    DEFAULT_EMOJI_USE      = "قليل"   # choices: "لا شيء", "قليل", "متوسط", "كثير"
+    DEFAULT_MAX_TOKENS     = 2048
+    
+    DEFAULT_CHARACTER_KEY  = "Physical Therapy Specialist - General Guidance"
+    DEFAULT_MOOD_KEY       = "neutral"    # options: "neutral", "encouraging", "patient"
+    DEFAULT_EMOJI_USE      = "few"        # options: "none", "few", "moderate", "many"
+    
     USE_CUSTOM_SYSTEM_TEXT = False
-    CUSTOM_SYSTEM_TEXT     = ""       # fill if USE_CUSTOM_SYSTEM_TEXT=True
-
-    # ─── same option dicts as before ────────────────────────────────────
+    CUSTOM_SYSTEM_TEXT     = ""
+    
     model_options = {
         "Llama 3 8B":   "llama3-8b-8192",
         "Mixtral 8x7B": "mixtral-8x7b-32768",
         "Gemma 7B":     "gemma-7b-it",
-        "ALLAM-2-7b": "allam-2-7b"
+        "ALLAM-2-7b":   "allam-2-7b"
     }
     character_options = {
-        "أخصائي علاج طبيعي - إرشادات عامة": (
-            "أنت أخصائي علاج طبيعي محترف، تقدّم للمستخدم تعليمات واضحة لتصحيح الوضعيات وتحسين الأداء. "
-            "تتحدّث بلغة بسيطة وداعمة، مع أمثلة عملية لكل تمرين."
+        "Physical Therapy Specialist - General Guidance": (
+            "You are a professional physical therapist who provides clear instructions "
+            "for correcting postures and improving performance. "
+            "Speak in simple, supportive language with practical examples for each exercise."
         ),
-        "أخصائي إعادة تأهيل بعد جراحة": (
-            "أنت أخصائي علاج طبيعي مختص في إعادة التأهيل بعد الجراحة. "
-            "تتأكد من تقديم نصائح آمنة ومناسبة لمرحلة التعافي، وتعمل على تقليل الألم وتعزيز الحركة."
+        "Post-Surgery Rehabilitation Specialist": (
+            "You are a physical therapist specializing in post-surgery rehabilitation. "
+            "Give safe, appropriate advice for the recovery phase, focusing on pain reduction and mobility enhancement."
         )
     }
     mood_options = {
-        "محايد": "",
-        "مشجّع": "تحدث بأسلوب يحفّز المريض ويشجعه على الاستمرار.",
-        "صبور": "استخدم لغة هادئة وصبورة، وأضف تفسيرات مبسطة عند الحاجة."
+        "neutral":     "",
+        "encouraging": "Use a tone that motivates and encourages the patient to continue.",
+        "patient":     "Use calm and patient language, adding simplified explanations when needed."
     }
-
-    # ─── now derive your runtime settings ────────────────────────────────
-    selected_model   = DEFAULT_MODEL_KEY
-    model            = model_options[selected_model]
-    temperature      = DEFAULT_TEMPERATURE
-    max_tokens       = DEFAULT_MAX_TOKENS
-
+    
+    selected_model     = DEFAULT_MODEL_KEY
+    model              = model_options[selected_model]
+    temperature        = DEFAULT_TEMPERATURE
+    max_tokens         = DEFAULT_MAX_TOKENS
+    
     selected_character = DEFAULT_CHARACTER_KEY
     character_prompt   = character_options[selected_character]
-
-    selected_mood  = DEFAULT_MOOD_KEY
-    mood_prompt    = mood_options[selected_mood]
-
-    emoji_use      = DEFAULT_EMOJI_USE
-
-    # build the system prompt
+    
+    selected_mood      = DEFAULT_MOOD_KEY
+    mood_prompt        = mood_options[selected_mood]
+    
+    emoji_use          = DEFAULT_EMOJI_USE
+    
+    # ─── 2) BILINGUAL INSTRUCTION ─────────────────────────────────────────
+    lang_inst = (
+        "يرجى الرد بنفس لغة المستخدم: إذا كتب المستخدم بالعربية فاستجب بالعربية، "
+        "وإذا كتب بالإنجليزية فاستجب بالإنجليزية. "
+        "Please respond in the user’s language: if they write in Arabic, reply in Arabic; "
+        "if they write in English, reply in English."
+    )
+    
+    # ─── 3) BUILD SYSTEM PROMPT ────────────────────────────────────────────
     if USE_CUSTOM_SYSTEM_TEXT and CUSTOM_SYSTEM_TEXT:
         system_prompt = CUSTOM_SYSTEM_TEXT
     else:
-        system_prompt = character_prompt
+        prompt_body = character_prompt
         if mood_prompt:
-            system_prompt += " " + mood_prompt
-
-        if emoji_use == "لا شيء":
-            system_prompt += " لا تستخدم أي رموز تعبيرية."
-        elif emoji_use == "كثير":
-            system_prompt += " استخدم الكثير من الرموز التعبيرية المناسبة للتشجيع."
-
-
-    # 4) تهيئة سجل المحادثة
-    # بعد إعداد system prompt وتعديل session_state.messages:
+            prompt_body += " " + mood_prompt
+    
+        if emoji_use == "none":
+            prompt_body += " Do not use any emojis."
+        elif emoji_use == "many":
+            prompt_body += " Use plenty of appropriate emojis for encouragement."
+    
+        # sandwich between two copies of lang_inst
+        system_prompt = f"{lang_inst}\n\n{prompt_body}\n\n{lang_inst}"
+    
+    # ─── 4) INIT CHAT HISTORY ──────────────────────────────────────────────
     if "messages" not in st.session_state:
-        # نبدأ بقائمة تحتوي على system prompt
-        st.session_state.messages = [{"role": "system", "content": system_prompt}]
-        # نضيف رسالة ترحيبية من النموذج نفسه
-        welcome = (
-            f"مرحبًا! أنا أخصائي العلاج الطبيعي الذكي. "
-            "أنا هنا لأساعدك في تصحيح الوضعيات وتحسين أدائك. كيف يمكنني مساعدتك اليوم؟"
-        )
-        st.session_state.messages.append({"role": "assistant", "content": welcome})
+        st.session_state.messages = [
+            {"role": "system",   "content": system_prompt},
+            {"role": "assistant","content": (
+                "Hello! I'm the intelligent physical therapy specialist. "
+                "I'm here to help you correct your posture and improve your performance. "
+                "How can I assist you today?"
+            )}
+        ]
     else:
-        # لو أردت تحديث system_prompt في rerun
         st.session_state.messages[0]["content"] = system_prompt
-
-
-
-    # 5) عرض المحادثات السابقة
+    
+    # ─── 5) RENDER PAST MESSAGES ───────────────────────────────────────────
     for msg in st.session_state.messages:
         if msg["role"] == "system":
             continue
-
-        # pick the right data‐URI
+        
         uri = USER_ICON_URI if msg["role"] == "user" else ASSISTANT_ICON_URI
-
         if msg["role"] == "assistant":
             html = f'''
               <div class="msg assistant">
@@ -701,19 +709,28 @@ elif st.session_state.page == "chat":
                 <img src="{uri}" class="avatar"/>
               </div>
             '''
-
         st.markdown(html, unsafe_allow_html=True)
-
-
-    # 6) إدخال المستخدم واستدعاء الـ API
-    user_input = st.chat_input("اسأل عن تمرينك أو حالتك العلاجية…")
+    
+    # ─── 6) CHAT INPUT & DYNAMIC LANGUAGE INJECTION ────────────────────────
+    def is_arabic(text: str) -> bool:
+        return bool(re.search(r'[\u0600-\u06FF]', text))
+    
+    user_input = st.chat_input("Ask about your exercise or therapy condition…")
     if user_input:
-        # record user
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        # render user
+        # a) record & render user
+        st.session_state.messages.append({"role":"user","content":user_input})
         render_message("user", user_input, USER_ICON_URI)
-
-        # call API
+    
+        # b) pick single-language instruction
+        if is_arabic(user_input):
+            turn_lang = "الرجاء الرد بالعربية فقط."
+        else:
+            turn_lang = "Please respond in English only."
+    
+        # c) rebuild system message for this turn
+        st.session_state.messages[0]["content"] = f"{turn_lang}\n\n{system_prompt}"
+    
+        # d) call the LLM
         try:
             resp = client.chat.completions.create(
                 messages=st.session_state.messages,
@@ -723,27 +740,24 @@ elif st.session_state.page == "chat":
             )
             reply = resp.choices[0].message.content
         except Exception as e:
-            reply = f"خطأ في الـ API: {e}"
-
-        # record + render assistant
-        st.session_state.messages.append({"role": "assistant", "content": reply})
+            reply = f"API error: {e}"
+    
+        # e) record & render assistant
+        st.session_state.messages.append({"role":"assistant","content":reply})
         render_message("assistant", reply, ASSISTANT_ICON_URI)
-
-    # # 7) زر إعادة الضبط
+    
+    # ─── 7) RESET BUTTON & API INFO ───────────────────────────────────────
     st.sidebar.divider()
-    if st.sidebar.button("إعادة ضبط"):
-        st.session_state.messages = [{"role": "system", "content": system_prompt}]
+    if st.sidebar.button("Reset"):
+        st.session_state.messages = [{"role":"system","content":system_prompt}]
         st.rerun()
-
-    # 8) معلومات الـ API في الأسفل
-    st.sidebar.caption(f"النموذج الحالي: {model}")
+    
+    st.sidebar.caption(f"Current model: {model}")
     if not os.getenv("GROQ_API_KEY"):
-        st.sidebar.warning("⚠️ مفتاح Groq API غير موجود. تأكد من ملف .env")
-
-
-    # ← Add this line to stop execution here
+        st.sidebar.warning("⚠️ GROQ API key not found. Please check your .env file")
+    
+    # ─── 8) STOP EXECUTION ────────────────────────────────────────────────
     st.stop()
-
 
 
 
@@ -779,6 +793,9 @@ exercises = [
     {"title": "Pose Tracker", "image": "./images/Shoulder Abduction.jpeg", "module": "pose_tracker"},
     {"title": "Neck Tilt", "image": "./images/Neck Tilt_white.jpg", "module": "pose_tracker"}, 
     {"title": "Knee Extension", "image": "./images/Knee Extension.png", "module": "pose_tracker"},
+    {"title": "shoulder_abdc_connection", "image": "./images/Knee Extension.png", "module": "shoulder_abdc_connection"},
+    {"title": "right_abduction_streamlit.py", "image": "./images/Knee Extension.png", "module": "right_abduction_streamlit"},
+    {"title": "left_abduction_streamlit.py", "image": "./images/Knee Extension.png", "module": "left_abduction_streamlit"},
 ]
 
 st.markdown('<div style="color: #334EAC; font-size: 1.1rem; font-family: Poppins, sans-serif; margin-bottom: 1.5rem;">Let\'s work through today\'s therapy session and take one step closer to your recovery:</div>', unsafe_allow_html=True)
