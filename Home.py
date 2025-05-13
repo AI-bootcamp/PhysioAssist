@@ -277,7 +277,7 @@ if st.session_state.page == "team":#============================================
         {
             "name": "Abdulaziz Alkharjy",
             "linkedin": "https://www.linkedin.com/in/abdulaziz--saad?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
-            "bio": "We developed an intelligent system where a camera serves as a virtual assistant for physical therapy. It uses MediaPipe for tracking and analyzing joint angles to monitor the user's movements, ensuring correct execution of exercises, and I worked on developing a customized AI chat feature, and contributed to the computer vision backend."
+            "bio": "We developed an intelligent system where a camera serves as a virtual assistant for physical therapy. It uses MediaPipe for tracking and analyzing joint angles to monitor the user's movements, ensuring correct execution of exercises, and I worked on developing a customized AI chat feature."
         }
 
         
@@ -421,7 +421,20 @@ elif st.session_state.page == "profile":
     st.stop()
 
 
+
+
+
+#CHATBOT 
+
+
 elif st.session_state.page == "chat":
+    # عرض الشعار أعلى صفحة التشات
+    logo_image_path = os.path.join(script_dir,  "images", "chat_logo.jpg")
+    st.markdown(f"""
+        <div style="display: flex; justify-content: center; margin-top: 5px; margin-bottom: 10px;">
+            <img src="data:image/png;base64,{get_base64_of_bin_file(logo_image_path)}" width="200">
+        </div>
+    """, unsafe_allow_html=True)
             # 1) تحميل متغيرات البيئة
     load_dotenv()
     client = groq.Client(api_key=os.getenv("GROQ_API_KEY"))
@@ -433,7 +446,6 @@ elif st.session_state.page == "chat":
     #     initial_sidebar_state="collapsed",
     #     layout="wide"
     # )
-    st.title("🩺 أخصائي العلاج الطبيعي الذكي بالعربي")
 
     # ─── inject CSS to right-align user bubbles ─────────────────────
     st.markdown(
@@ -460,7 +472,7 @@ elif st.session_state.page == "chat":
 
           /* <-- Updated User bubble color here --> */
           .user .bubble {
-            background: #BBD6EB !important;
+            background: #4a7cc7 !important;
             color: #000 !important;
           }
 
@@ -478,22 +490,24 @@ elif st.session_state.page == "chat":
             padding: 12px !important;
             border: none !important;
             border-radius: 18px !important;
-            background: #262626 !important;
-            color: #fff !important;
+            background: #4a7cc7!important;
+            color: #4a7cc7 !important;
             font-size: 16px !important;
             outline: none !important;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.2) !important;
           }
-          textarea[role="textbox"]::placeholder { color: #999 !important; }
-          button[kind="primary"] {
-            padding: 10px 20px !important;
-            margin-left: 0.5rem !important;
-            background: #4CAF50 !important;
-            color: #fff !important;
-            border: none !important;
-            border-radius: 18px !important;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
-          }
+         textarea[role="textbox"] {
+         width: 100% !important;
+         padding: 12px !important;
+         border: none !important;
+         border-radius: 18px !important;
+         background: #ffffff !important; /* ← خلفية البار */
+         color: #000 !important;          /* ← لون النص */
+         font-size: 16px !important;
+         outline: none !important;
+         box-shadow: inset 0 2px 4px rgba(0,0,0,0.2) !important;
+        }
+
           button[kind="primary"]:hover { background: #45a049 !important; }
         </style>
         """,
@@ -528,9 +542,8 @@ elif st.session_state.page == "chat":
         b64 = base64.b64encode(data).decode()
         return f"data:image/png;base64,{b64}"
 
-    USER_ICON_URI      = img_to_datauri("assets/user_icon.png")
-    ASSISTANT_ICON_URI = img_to_datauri("assets/assistant_icon.png")
-
+    USER_ICON_URI      = img_to_datauri("images/user_icon.png")
+    ASSISTANT_ICON_URI = img_to_datauri("images/assistant_icon.jpg")
 
 
 
