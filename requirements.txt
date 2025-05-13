@@ -1,0 +1,8 @@
+streamlit
+python-dotenv
+groq
+opencv-python
+numpy
+mediapipe
+Pillow
+pyttsx3
