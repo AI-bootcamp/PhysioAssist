@@ -6,3 +6,4 @@ numpy
 mediapipe
 Pillow
 pyttsx3
+pygame

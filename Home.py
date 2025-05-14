@@ -804,7 +804,7 @@ exercises = [
     {"title": "Finger Resistance", "image": "./images/Finger Resistance_white.png", "module": "E15"},
     {"title": "Pronation vs Supination", "image": "./images/Pronation vs Supination_white.jpg", "module": "E16"},
     {"title": "Pose Tracker", "image": "./images/Shoulder Abduction.jpeg", "module": "pose_tracker"},
-    {"title": "Neck Tilt", "image": "./images/Neck Tilt_white.jpg", "module": "pose_tracker"}, 
+    {"title": "Neck Tilt", "image": "./images/Neck Tilt_white.jpg", "module": "neck streching_ streamlit"}, 
     {"title": "Knee Extension", "image": "./images/Knee Extension.png", "module": "pose_tracker"},
     # {"title": "shoulder_abdc_connection", "image": "./images/tobedone.jpg", "module": "shoulder_abdc_connection"},
     {"title": "Right Abduction", "image": "./images/tobedone.jpg", "module": "right_abduction_streamlit"},
