@@ -6,6 +6,7 @@ import time
 import threading
 import pyttsx3
 import math
+import base64
 
 # Initialize mediapipe and TTS
 mp_drawing = mp.solutions.drawing_utils
@@ -32,17 +33,37 @@ def calculate_angle(a, b, c):
 
 # Streamlit app
 def main():
-    # ====== FORCE REMOVE TITLE ====== 
     st.markdown(""" 
         <style>
             .appview-container .main .block-container {
                 padding-top: 0rem;
+                color: black !important;
             }
-            h1 {
-                display: none !important;
+            h1, h2, h3, h4, h5, h6, p, div, span, label, input, button {
+                color: black !important;
+            }
+            .stSlider label, .stNumberInput label, .stSelectbox label, .stTextInput label {
+                color: black !important;
+            }
+            .stAlert {
+                color: black !important;
+            }
+            .stSlider > div > div > div > div::-webkit-slider-runnable-track {
+                background: #081F5C !important;
+                height: 4px;
+            }
+            .stSlider > div > div > div > div::-webkit-slider-thumb {
+                background: #081F5C !important;
+                width: 16px;
+                height: 16px;
+                margin-top: -6px;
+            }
+            section[data-testid="stSidebar"] * {
+                color: #EDF1F6 !important;
             }
         </style>
     """, unsafe_allow_html=True)
+
     st.title(" ")  # Empty title
 
     target_reps = st.slider("Select Number of Repetitions", min_value=1, max_value=20, value=10)
@@ -52,7 +73,7 @@ def main():
     stage = "down"
     rep_completed = False
     elbow_warning_issued = False
-    success_message_displayed = False  # Flag to show success only once
+    success_message_displayed = False
 
     target_angles = np.linspace(-90, 90, 10)
     upper_arm_len = 90
@@ -64,7 +85,6 @@ def main():
     cap = cv2.VideoCapture(0)
     frame_placeholder = st.empty()
     rep_counter = st.empty()
-    angle_display = st.empty()
     warning_placeholder = st.empty()
     success_placeholder = st.empty()
 
@@ -85,24 +105,24 @@ def main():
             try:
                 landmarks = results.pose_landmarks.landmark
 
-                # Left arm (mirrored camera)
-                l_shoulder = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value]
-                l_elbow = landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value]
-                l_wrist = landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value]
-                l_hip = landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value]
+                # LEFT ARM (mirrored camera) => RIGHT landmarks
+                shoulder_lm = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value]
+                elbow_lm = landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value]
+                wrist_lm = landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value]
+                hip_lm = landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value]
 
-                shoulder = [l_shoulder.x, l_shoulder.y]
-                elbow = [l_elbow.x, l_elbow.y]
-                wrist = [l_wrist.x, l_wrist.y]
-                hip = [l_hip.x, l_hip.y]
+                shoulder = [shoulder_lm.x, shoulder_lm.y]
+                elbow = [elbow_lm.x, elbow_lm.y]
+                wrist = [wrist_lm.x, wrist_lm.y]
+                hip = [hip_lm.x, hip_lm.y]
 
                 shoulder_px = np.multiply(shoulder, [640, 480]).astype(int)
-                elbow_px = np.multiply([l_elbow.x, l_elbow.y], [640, 480]).astype(int)
+                elbow_px = np.multiply(elbow, [640, 480]).astype(int)
 
                 shoulder_angle = calculate_angle(hip, shoulder, elbow)
                 elbow_angle = calculate_angle(shoulder, elbow, wrist)
 
-                # Elbow check with TTS + warning box
+                # Elbow check
                 if elbow_angle < 160:
                     if not elbow_warning_issued:
                         speak("Straighten your elbow")
@@ -118,7 +138,6 @@ def main():
                     if rep_completed:
                         counter += 1
                         rep_completed = False
-                        print(f"Rep: {counter}")
                         if counter >= target_reps and not success_message_displayed:
                             speak("Great job! You smashed your goal")
                             success_placeholder.success("🎉 Great job! You smashed your goal!")
@@ -128,9 +147,9 @@ def main():
                     stage = "up"
                     rep_completed = True
 
-                # Ghost arm drawing (left arm) - make the ghost arm point in the opposite direction
+                # Ghost arm drawing (mirror left arm angles)
                 for angle in target_angles:
-                    angle_rad = math.radians(180 - angle)  # Inverse the angle to point opposite
+                    angle_rad = math.radians(180 - angle)  # flip for left side
                     ghost_elbow = [
                         shoulder_px[0] + upper_arm_len * math.cos(angle_rad),
                         shoulder_px[1] - upper_arm_len * math.sin(angle_rad)
@@ -149,18 +168,24 @@ def main():
                     cv2.circle(image, tuple(np.int32(ghost_elbow)), 4, ghost_color, -1)
                     cv2.circle(image, tuple(np.int32(ghost_wrist)), 4, ghost_color, -1)
 
-                # Draw user's current arm (shoulder to elbow only)
+                # Draw user's arm (shoulder to elbow only)
                 cv2.line(image, tuple(shoulder_px), tuple(elbow_px), (0, 255, 255), 2)
                 cv2.circle(image, tuple(shoulder_px), 5, (0, 255, 255), -1)
                 cv2.circle(image, tuple(elbow_px), 5, (0, 255, 255), -1)
 
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Error: {e}")
 
-            # ✅ Display reps only in Streamlit, not on the camera frame
             rep_counter.text(f"Repetitions: {counter} / {target_reps}")
 
-            frame_placeholder.image(image, channels="BGR")
+            # Centered camera feed using base64
+            _, buffer = cv2.imencode('.jpg', image)
+            img_b64 = base64.b64encode(buffer).decode()
+            frame_placeholder.markdown(f"""
+                <div style='display: flex; justify-content: center;'>
+                    <img src='data:image/jpeg;base64,{img_b64}' style='max-width: 100%; height: auto; border-radius: 10px;'/>
+                </div>
+            """, unsafe_allow_html=True)
 
         cap.release()
 

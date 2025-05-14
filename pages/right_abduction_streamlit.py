@@ -6,6 +6,7 @@ import time
 import threading
 import pyttsx3
 import math
+import base64
 
 # Initialize mediapipe and TTS
 mp_drawing = mp.solutions.drawing_utils
@@ -32,17 +33,38 @@ def calculate_angle(a, b, c):
 
 # Streamlit app
 def main():
-    # ====== FORCE REMOVE TITLE ====== 
+    # ====== CUSTOM STYLING ======
     st.markdown(""" 
         <style>
             .appview-container .main .block-container {
                 padding-top: 0rem;
+                color: black !important;
             }
-            h1 {
-                display: none !important;
+            h1, h2, h3, h4, h5, h6, p, div, span, label, input, button {
+                color: black !important;
+            }
+            .stSlider label, .stNumberInput label, .stSelectbox label, .stTextInput label {
+                color: black !important;
+            }
+            .stAlert {
+                color: black !important;
+            }
+            .stSlider > div > div > div > div::-webkit-slider-runnable-track {
+                background: #081F5C !important;
+                height: 4px;
+            }
+            .stSlider > div > div > div > div::-webkit-slider-thumb {
+                background: #081F5C !important;
+                width: 16px;
+                height: 16px;
+                margin-top: -6px;
+            }
+            section[data-testid="stSidebar"] * {
+                color: #EDF1F6 !important;
             }
         </style>
     """, unsafe_allow_html=True)
+
     st.title(" ")  # Empty title
 
     target_reps = st.slider("Select Number of Repetitions", min_value=1, max_value=20, value=10)
@@ -52,7 +74,7 @@ def main():
     stage = "down"
     rep_completed = False
     elbow_warning_issued = False
-    success_message_displayed = False  # Flag to show success only once
+    success_message_displayed = False
 
     target_angles = np.linspace(-90, 90, 10)
     upper_arm_len = 90
@@ -64,7 +86,6 @@ def main():
     cap = cv2.VideoCapture(0)
     frame_placeholder = st.empty()
     rep_counter = st.empty()
-    angle_display = st.empty()
     warning_placeholder = st.empty()
     success_placeholder = st.empty()
 
@@ -97,7 +118,7 @@ def main():
                 hip = [r_hip.x, r_hip.y]
 
                 shoulder_px = np.multiply(shoulder, [640, 480]).astype(int)
-                elbow_px = np.multiply([r_elbow.x, r_elbow.y], [640, 480]).astype(int)
+                elbow_px = np.multiply(elbow, [640, 480]).astype(int)
 
                 shoulder_angle = calculate_angle(hip, shoulder, elbow)
                 elbow_angle = calculate_angle(shoulder, elbow, wrist)
@@ -118,7 +139,6 @@ def main():
                     if rep_completed:
                         counter += 1
                         rep_completed = False
-                        print(f"Rep: {counter}")
                         if counter >= target_reps and not success_message_displayed:
                             speak("Great job! You smashed your goal")
                             success_placeholder.success("🎉 Great job! You smashed your goal!")
@@ -154,13 +174,19 @@ def main():
                 cv2.circle(image, tuple(shoulder_px), 5, (0, 255, 255), -1)
                 cv2.circle(image, tuple(elbow_px), 5, (0, 255, 255), -1)
 
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Error: {e}")
 
-            # ✅ Display reps only in Streamlit, not on the camera frame
             rep_counter.text(f"Repetitions: {counter} / {target_reps}")
 
-            frame_placeholder.image(image, channels="BGR")
+            # Centered camera feed using base64
+            _, buffer = cv2.imencode('.jpg', image)
+            img_b64 = base64.b64encode(buffer).decode()
+            frame_placeholder.markdown(f"""
+                <div style='display: flex; justify-content: center;'>
+                    <img src='data:image/jpeg;base64,{img_b64}' style='max-width: 100%; height: auto; border-radius: 10px;'/>
+                </div>
+            """, unsafe_allow_html=True)
 
         cap.release()
 
