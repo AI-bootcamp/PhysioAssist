@@ -5,7 +5,7 @@ import mediapipe as mp
 import time
 
 def main():
-    # ====== REMOVE TITLE & STYLING ======
+    # ====== REMOVE TITLE & CUSTOM STYLE ======
     st.markdown("""
         <style>
             .appview-container .main .block-container {
@@ -14,21 +14,22 @@ def main():
             h1 {
                 display: none !important;
             }
-            .status-box {
-                font-size: 20px;
-                font-weight: bold;
-                padding: 10px;
-                border-radius: 10px;
+            .custom-card {
+                background-color: #e6f4ff;
+                padding: 20px;
+                border-radius: 15px;
                 text-align: center;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                font-family: 'Arial', sans-serif;
+            }
+            .custom-card h4 {
                 margin-bottom: 10px;
+                color: black;
             }
-            .good {
-                background-color: #c4f0c5;
-                color: #2e7d32;
-            }
-            .bad {
-                background-color: #ffe6e6;
-                color: #c62828;
+            .custom-card p {
+                font-size: 22px;
+                color: black;
+                margin: 0;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -73,14 +74,29 @@ def main():
     cap = cv2.VideoCapture(0)
 
     # ==== Layout Placeholders ====
-    col1, col2 = st.columns([2, 1])  # Wider for bar, narrower for status
-    progress_bar = col1.progress(0)
-    status_box = col2.empty()
+    col1, col2 = st.columns(2)
+    instruction_box = col1.empty()
+    score_box = col2.empty()
+
+    # Initial card display
+    instruction_box.markdown(f"""
+        <div class="custom-card">
+            <h4>📢 Instruction</h4>
+            <p>Start moving your wrist!</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    score_box.markdown(f"""
+        <div class="custom-card">
+            <h4>🎯 Score</h4>
+            <p>{counter} reps | {points} pts</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    progress_bar = st.progress(0)
 
     frame_placeholder = st.empty()
-    rep_counter = st.empty()
     angle_display = st.empty()
-    point_display = st.empty()
 
     # ==== Game Loop ====
     while True:
@@ -102,7 +118,6 @@ def main():
         results = hands.process(rgb)
 
         status = "Keep Going..."
-        status_style = "status-box"
 
         if results.multi_hand_landmarks:
             for handLms in results.multi_hand_landmarks:
@@ -116,17 +131,15 @@ def main():
 
                 angle = calculate_angle(wrist, palm, tip)
 
-                # Rep logic fix
+                # Rep logic
                 if angle < 90 and direction == 0:
                     direction = 1  # Bent
                     status = "↘️ Bend Your Wrist"
-                    status_style += " bad"
                 elif angle > 160 and direction == 1:
                     counter += 1
                     points += 1
                     direction = 0  # Reset
                     status = "✅ Wrist Straightened!"
-                    status_style += " good"
 
                 # Display black-colored angle
                 angle_display.markdown(f"""
@@ -145,28 +158,23 @@ def main():
                     </div>
                 """, unsafe_allow_html=True)
 
-        # Display webcam and other UI
+        # Display webcam and UI
         frame_placeholder.image(rgb, channels="RGB")
 
-        # Display black-colored rep counter
-        rep_counter.markdown(f"""
-            <div style='
-                font-size: 24px;
-                font-weight: bold;
-                color: black;
-                background-color: white;
-                padding: 10px;
-                border-radius: 10px;
-                text-align: center;
-                border: 1px solid #ccc;
-                margin-bottom: 10px;
-            '>
-                💪 Reps: {counter}
+        # Update custom cards
+        instruction_box.markdown(f"""
+            <div class="custom-card">
+                <h4>📢 Instruction</h4>
+                <p>{status}</p>
             </div>
         """, unsafe_allow_html=True)
 
-        point_display.metric("🏆 Points", points)
-        status_box.markdown(f'<div class="{status_style}">{status}</div>', unsafe_allow_html=True)
+        score_box.markdown(f"""
+            <div class="custom-card">
+                <h4>🎯 Score</h4>
+                <p>{counter} reps | {points} pts</p>
+            </div>
+        """, unsafe_allow_html=True)
 
     # ==== End of Game ====
     cap.release()
